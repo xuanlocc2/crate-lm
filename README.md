@@ -233,6 +233,92 @@ Then you should get the activations from the CRATE language model. You can use t
 
 You can choose to evaluate the neuron-level interpretability with either OpenAI or Anthropic metric. You need to also change `./automated-interpretability/neuron_explainer/activations/activations.py` line 160 and 197 when you change from OpenAI to Anthropic metric.
 
+### Lightweight Local Interpretability Metrics
+
+For a small local benchmark without running the full LLM explainer/simulator
+pipeline, use `interpretability_metrics.py`. The script hooks CRATE ISTA sparse
+code activations, builds activation records, and computes local proxy versions
+of the three metric families used in the paper:
+
+| Metric | Evaluation records |
+|--------|--------------------|
+| `random` | Random validation text windows |
+| `top_and_random` | Top-activation windows plus random windows |
+| `anthropic` | Samples from activation quantiles |
+
+The script also assigns each ISTA feature to a subspace `U_k` by the largest
+L2 energy of its dictionary atom over the attention-head-sized embedding chunks,
+then aggregates metric scores by `U_k`.
+
+> These are lightweight proxy scores for local experiments. They are not
+> directly comparable to the paper's official LLM-based interpretability scores.
+
+Example smoke test:
+
+```powershell
+python interpretability_metrics.py `
+  --out_dir=out-crate-small-wikitext2 `
+  --dataset=wikitext2 `
+  --split=val `
+  --device=cuda `
+  --layers=0 `
+  --num_batches=1 `
+  --batch_size=1 `
+  --num_features=4 `
+  --top_k=3 `
+  --random_k=3 `
+  --quantile_k=1 `
+  --output=interpretability_results\smoke_test_subspace.json
+```
+
+Run the small benchmark checkpoints:
+
+```powershell
+python interpretability_metrics.py `
+  --out_dir=out-crate-small-wikitext2 `
+  --dataset=wikitext2 `
+  --split=val `
+  --device=cuda `
+  --layers=all `
+  --num_batches=8 `
+  --batch_size=4 `
+  --num_features=32 `
+  --output=interpretability_results\wikitext2_scratch_interpretability_subspace.json
+
+python interpretability_metrics.py `
+  --out_dir=out-crate-small-tinystories `
+  --dataset=tinystories `
+  --split=val `
+  --device=cuda `
+  --layers=all `
+  --num_batches=8 `
+  --batch_size=4 `
+  --num_features=32 `
+  --output=interpretability_results\tinystories_scratch_interpretability_subspace.json
+
+python interpretability_metrics.py `
+  --out_dir=out-crate-small-ft-wikitext2 `
+  --dataset=wikitext2 `
+  --split=val `
+  --device=cuda `
+  --layers=all `
+  --num_batches=8 `
+  --batch_size=4 `
+  --num_features=32 `
+  --output=interpretability_results\wikitext2_finetuned_interpretability_subspace.json
+
+python interpretability_metrics.py `
+  --out_dir=out-crate-small-ft-tinystories `
+  --dataset=tinystories `
+  --split=val `
+  --device=cuda `
+  --layers=all `
+  --num_batches=8 `
+  --batch_size=4 `
+  --num_features=32 `
+  --output=interpretability_results\tinystories_finetuned_interpretability_subspace.json
+```
+
 # Sparse Auto-encoder
 
 ## Training

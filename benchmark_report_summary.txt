@@ -76,6 +76,54 @@ Evaluate TinyStories fine-tuned checkpoint:
     --device=cuda `
     --eval_iters=50
 
+Compute lightweight interpretability metrics on Wikitext-2:
+
+  python interpretability_metrics.py `
+    --out_dir=out-crate-small-wikitext2 `
+    --dataset=wikitext2 `
+    --split=val `
+    --device=cuda `
+    --layers=all `
+    --num_batches=8 `
+    --batch_size=4 `
+    --num_features=32
+
+Compute lightweight interpretability metrics on TinyStories:
+
+  python interpretability_metrics.py `
+    --out_dir=out-crate-small-tinystories `
+    --dataset=tinystories `
+    --split=val `
+    --device=cuda `
+    --layers=all `
+    --num_batches=8 `
+    --batch_size=4 `
+    --num_features=32
+
+Compute lightweight interpretability metrics on Wikitext-2 fine-tuned checkpoint:
+
+  python interpretability_metrics.py `
+    --out_dir=out-crate-small-ft-wikitext2 `
+    --dataset=wikitext2 `
+    --split=val `
+    --device=cuda `
+    --layers=all `
+    --num_batches=8 `
+    --batch_size=4 `
+    --num_features=32
+
+Compute lightweight interpretability metrics on TinyStories fine-tuned checkpoint:
+
+  python interpretability_metrics.py `
+    --out_dir=out-crate-small-ft-tinystories `
+    --dataset=tinystories `
+    --split=val `
+    --device=cuda `
+    --layers=all `
+    --num_batches=8 `
+    --batch_size=4 `
+    --num_features=32
+
 
 Model configuration
 -------------------
@@ -86,9 +134,9 @@ Model:
 
 Architecture:
 
-  Number of layers: 4
-  Number of attention heads: 4
-  Embedding dimension: 256
+  Number of layers (L): 4
+  Number of attention heads (K): 4
+  Embedding dimension (d): 256
   Block size: 256
   Dropout: 0.1
   Vocabulary size: 50304
@@ -198,28 +246,125 @@ Interpretation:
   Lower perplexity is better.
 
 
+Interpretability metrics
+------------------------
+
+The CRATE-LM paper evaluates neuron-level interpretability using three
+activation-record protocols:
+
+  OpenAI random-only:
+    Scores whether a neuron avoids activating on random, usually irrelevant
+    text excerpts.
+
+  OpenAI top-and-random:
+    Scores whether a neuron's behavior is consistent across both top-activated
+    excerpts and random excerpts.
+
+  Anthropic:
+    Scores behavior across activation quantile samples, following the
+    short-context / activation-spectrum style used in Anthropic feature
+    interpretability work.
+
+Implementation in this mini benchmark:
+
+  Script: interpretability_metrics.py
+
+  The script extracts CRATE ISTA sparse-code activations from each selected
+  layer, builds top-activation, random, and quantile activation records, then
+  computes local proxy scores for:
+
+    random
+    top_and_random
+    anthropic
+
+  Important limitation:
+
+    These are lightweight local proxy scores. They do not use the full LLM
+    explainer and LLM simulator pipeline from the paper, so the values are not
+    directly comparable to the official CRATE-LM interpretability scores.
+
+  Output directory:
+
+    interpretability_results/
+
+  Output format:
+
+    JSON files containing per-layer, per-feature scores and an aggregate
+    summary for random, top_and_random, and anthropic.
+
+Computed proxy interpretability results for scratch checkpoints:
+
+  Dataset       Metric           Mean correlation   Std correlation   Features
+  Wikitext-2    random           0.2564             0.2265            128
+  Wikitext-2    top_and_random   0.4263             0.1970            128
+  Wikitext-2    anthropic        0.3726             0.1971            128
+  TinyStories   random           0.1586             0.2910            128
+  TinyStories   top_and_random   0.2693             0.2893            128
+  TinyStories   anthropic        0.2235             0.2885            128
+
+Computed proxy interpretability results for fine-tuned checkpoints:
+
+  Dataset       Metric           Mean correlation   Std correlation   Features
+  Wikitext-2    random           0.2912             0.2553            128
+  Wikitext-2    top_and_random   0.4275             0.1874            128
+  Wikitext-2    anthropic        0.3736             0.2072            128
+  TinyStories   random           0.3889             0.1912            128
+  TinyStories   top_and_random   0.4923             0.1620            128
+  TinyStories   anthropic        0.4508             0.1656            128
+
+Generated files:
+
+  interpretability_results\wikitext2_scratch_interpretability.json
+  interpretability_results\tinystories_scratch_interpretability.json
+  interpretability_results\wikitext2_finetuned_interpretability.json
+  interpretability_results\tinystories_finetuned_interpretability.json
+  interpretability_results\tinystories_scratch_interpretability_subspace.json
+  interpretability_results\wikitext2_finetuned_interpretability_subspace.json
+  interpretability_results\tinystories_finetuned_interpretability_subspace.json
+
+Subspace U_k proxy interpretability results:
+
+  TinyStories scratch:
+    U_0 random=0.2064 top_and_random=0.3257 anthropic=0.2944 n=27
+    U_1 random=0.1456 top_and_random=0.2933 anthropic=0.2254 n=26
+    U_2 random=0.1038 top_and_random=0.1889 anthropic=0.1495 n=53
+    U_3 random=0.2472 top_and_random=0.3653 anthropic=0.3128 n=22
+
+  Wikitext-2 fine-tuned:
+    U_0 random=0.2603 top_and_random=0.3918 anthropic=0.3366 n=26
+    U_1 random=0.3483 top_and_random=0.4613 anthropic=0.4116 n=33
+    U_2 random=0.2927 top_and_random=0.4278 anthropic=0.3747 n=36
+    U_3 random=0.2567 top_and_random=0.4215 anthropic=0.3636 n=33
+
+  TinyStories fine-tuned:
+    U_0 random=0.3454 top_and_random=0.4768 anthropic=0.4296 n=32
+    U_1 random=0.4156 top_and_random=0.5151 anthropic=0.4839 n=25
+    U_2 random=0.3724 top_and_random=0.4694 anthropic=0.4231 n=39
+    U_3 random=0.4316 top_and_random=0.5179 anthropic=0.4799 n=32
+
+
 Results
 -------
 
 Scratch training results:
 
   Dataset       Training setup      Val loss   Perplexity
-  Wikitext-2    From scratch        5.6646     288.48
-  TinyStories   From scratch        2.2232     9.24
+  Wikitext-2    From scratch        5.6781     292.4
+  TinyStories   From scratch        2.2258     9.26
 
 Fine-tuning results:
 
   Dataset       Training setup                 Val loss   Perplexity
-  Wikitext-2    Fine-tuned from Shakespeare     6.7195     828.38
-  TinyStories   Fine-tuned from Shakespeare     4.2728     71.72
+  Wikitext-2    Fine-tuned from Shakespeare     6.6962     809.3
+  TinyStories   Fine-tuned from Shakespeare     4.2911     73.05
 
 Combined result table:
 
   Dataset       Training setup                 Val loss   Perplexity
-  Wikitext-2    From scratch                    5.6646     288.48
-  Wikitext-2    Fine-tuned from Shakespeare     6.7195     828.38
-  TinyStories   From scratch                    2.2232     9.24
-  TinyStories   Fine-tuned from Shakespeare     4.2728     71.72
+  Wikitext-2    From scratch                    5.6781     292.4
+  Wikitext-2    Fine-tuned from Shakespeare     6.6962     809.3
+  TinyStories   From scratch                    2.2258     9.26
+  TinyStories   Fine-tuned from Shakespeare     4.2911     73.05
 
 
 Interpretation
@@ -244,12 +389,16 @@ The CRATE-LM paper proposes a white-box language model architecture designed to
 improve neuron-level interpretability. The main paper focuses on interpretability
 analysis and neuron-level explanation quality.
 
-This mini benchmark does not reproduce the full neuron-level interpretability
-evaluation from the paper. Instead, it verifies the training and evaluation
-pipeline for CRATE-small and compares two training settings:
+This mini benchmark does not reproduce the full LLM-based neuron-level
+interpretability evaluation from the paper. Instead, it verifies the training
+and evaluation pipeline for CRATE-small, compares two training settings, and
+adds a lightweight local computation of the three interpretability protocol
+families used in the paper:
 
   1. Training from scratch on novel datasets.
   2. Fine-tuning from a Shakespeare-trained checkpoint on novel datasets.
+  3. Local proxy metrics for random, top-and-random, and Anthropic-style
+     activation records.
 
 The experiment shows that CRATE-small can be trained and evaluated successfully,
 but in this small-scale setting, scratch training performs better than

@@ -4,3 +4,4 @@ __pycache__/
 # Prepared local datasets and training outputs
 data/shakespeare/input.txt
 out-crate-small-*/
+interpretability_results/
